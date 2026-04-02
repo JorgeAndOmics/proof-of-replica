@@ -229,7 +229,7 @@ class ColumnDefinition(BaseModel):
     @classmethod
     def _resolve_stats_type(cls, data: Any) -> Any:
         """Parse stats with the correct model based on dtype."""
-        if not isinstance(data, dict):
+        if not isinstance(data, dict):  # pragma: no cover
             return data
         raw_stats = data.get("stats")
         raw_dtype = data.get("dtype")
@@ -237,8 +237,7 @@ class ColumnDefinition(BaseModel):
             return data
         if isinstance(raw_stats, BaseModel):
             return data
-        stats_cls = _DTYPE_TO_STATS.get(ColumnDtype(raw_dtype))
-        if stats_cls is not None:
-            data = dict(data)
-            data["stats"] = stats_cls.model_validate(raw_stats)
+        stats_cls = _DTYPE_TO_STATS[ColumnDtype(raw_dtype)]
+        data = dict(data)
+        data["stats"] = stats_cls.model_validate(raw_stats)
         return data

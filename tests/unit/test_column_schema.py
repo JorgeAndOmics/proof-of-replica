@@ -366,3 +366,15 @@ class TestColumnDefinition:
                 dtype="float64",
                 bogus=True,  # type: ignore[call-arg]
             )
+
+    def test_from_existing_instance(self):
+        """Validator handles receiving a ColumnDefinition instance (non-dict data)."""
+        col = ColumnDefinition(name="x", dtype="float64")
+        restored = ColumnDefinition.model_validate(col)
+        assert restored == col
+
+    def test_with_pre_parsed_stats(self):
+        """Validator skips re-parsing when stats is already a BaseModel."""
+        stats = NumericStats(mean=1.0, std=0.5)
+        col = ColumnDefinition(name="x", dtype="float64", stats=stats)
+        assert col.stats is stats
