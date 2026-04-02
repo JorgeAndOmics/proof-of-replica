@@ -1,9 +1,21 @@
 """Top-level profile schema and configuration models."""
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from proof_of_replica.core.column_schema import ColumnDefinition
 from proof_of_replica.core.enums import CorrelationMethod, MissingnessPattern
+from proof_of_replica.exceptions import (
+    ProfileError,
+    ProfileIssue,
+    ProfileValidationError,
+)
+
+logger = logging.getLogger(__name__)
 
 # ── Global config blocks ─────────────────────────────────────
 
@@ -107,3 +119,77 @@ class Profile(BaseModel):
 
     correlations: CorrelationConfig | None = None
     missingness: MissingnessConfig | None = None
+
+
+# ── Profile I/O ──────────────────────────────────────────────
+
+
+def _pydantic_error_to_issues(exc: ValidationError) -> list[ProfileIssue]:
+    """Convert Pydantic ValidationError to structured ProfileIssues."""
+    issues: list[ProfileIssue] = []
+    for error in exc.errors():
+        location = ".".join(str(part) for part in error["loc"])
+        problem = error["msg"]
+        suggestion = f"Check the value at '{location}' in your profile JSON."
+        issues.append(
+            ProfileIssue(
+                location=location,
+                problem=problem,
+                suggestion=suggestion,
+            )
+        )
+    return issues
+
+
+def load_profile(path: Path) -> Profile:
+    """Load and validate a profile from a JSON file.
+
+    Args:
+        path: Path to the profile JSON file.
+
+    Returns:
+        A validated Profile instance.
+
+    Raises:
+        ProfileError: If the file cannot be read or parsed as JSON.
+        ProfileValidationError: If the JSON fails schema validation.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        msg = f"Cannot read profile file: {path}"
+        raise ProfileError(msg) from exc
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        msg = f"Invalid JSON in profile file: {path}"
+        raise ProfileError(msg) from exc
+
+    try:
+        return Profile.model_validate(data)
+    except ValidationError as exc:
+        issues = _pydantic_error_to_issues(exc)
+        msg = f"Profile validation failed with {len(issues)} error(s) in {path}"
+        raise ProfileValidationError(msg, issues=issues) from exc
+
+
+def save_profile(profile: Profile, path: Path) -> None:
+    """Serialize a profile to a JSON file.
+
+    Args:
+        profile: The Profile instance to save.
+        path: Output file path.
+    """
+    data = profile.model_dump(mode="json", exclude_none=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def generate_json_schema() -> dict[str, Any]:
+    """Generate the JSON Schema for the Profile model.
+
+    Returns:
+        A dict representing the JSON Schema, suitable for writing
+        to ``profile.schema.json``.
+    """
+    return Profile.model_json_schema()

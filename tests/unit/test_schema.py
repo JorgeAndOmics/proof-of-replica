@@ -1,5 +1,8 @@
 """Tests for top-level profile schema models."""
 
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -12,6 +15,14 @@ from proof_of_replica.core.schema import (
     Profile,
     ProfilerConfig,
     ValidationConfig,
+    generate_json_schema,
+    load_profile,
+    save_profile,
+)
+from proof_of_replica.exceptions import (
+    ProfileError,
+    ProfileIssue,
+    ProfileValidationError,
 )
 
 # ── DefaultsConfig ───────────────────────────────────────────
@@ -198,3 +209,98 @@ class TestProfile:
         p = Profile.model_validate_json(json_str)
         assert p.tool == "proof-of-replica"
         assert len(p.columns) == 1
+
+
+# ── load_profile / save_profile ──────────────────────────────
+
+
+class TestLoadProfile:
+    def test_load_valid(self, tmp_path: Path):
+        data = {
+            "version": "0.2.0",
+            "columns": [{"name": "x", "dtype": "float64"}],
+        }
+        path = tmp_path / "profile.json"
+        path.write_text(json.dumps(data))
+        p = load_profile(path)
+        assert p.version == "0.2.0"
+
+    def test_load_missing_file(self, tmp_path: Path):
+        with pytest.raises(ProfileError, match="Cannot read"):
+            load_profile(tmp_path / "nonexistent.json")
+
+    def test_load_invalid_json(self, tmp_path: Path):
+        path = tmp_path / "bad.json"
+        path.write_text("{not valid json")
+        with pytest.raises(ProfileError, match="Invalid JSON"):
+            load_profile(path)
+
+    def test_load_schema_invalid(self, tmp_path: Path):
+        data = {"version": "0.2.0", "columns": []}
+        path = tmp_path / "empty_cols.json"
+        path.write_text(json.dumps(data))
+        with pytest.raises(ProfileValidationError) as exc_info:
+            load_profile(path)
+        assert len(exc_info.value.issues) > 0
+        assert exc_info.value.issues[0].location
+
+
+class TestSaveProfile:
+    def test_round_trip(self, tmp_path: Path):
+        p = Profile(
+            version="0.2.0",
+            columns=[ColumnDefinition(name="id", dtype="string", role="identifier")],
+        )
+        path = tmp_path / "out.json"
+        save_profile(p, path)
+
+        loaded = load_profile(path)
+        assert loaded.version == p.version
+        assert loaded.columns[0].name == "id"
+
+    def test_excludes_none(self, tmp_path: Path):
+        p = Profile(
+            version="0.2.0",
+            columns=[ColumnDefinition(name="x", dtype="float64")],
+        )
+        path = tmp_path / "out.json"
+        save_profile(p, path)
+        data = json.loads(path.read_text())
+        assert "source_hash" not in data
+        assert "correlations" not in data
+
+
+# ── generate_json_schema ─────────────────────────────────────
+
+
+class TestGenerateJsonSchema:
+    def test_returns_dict(self):
+        schema = generate_json_schema()
+        assert isinstance(schema, dict)
+        assert "properties" in schema
+        assert "columns" in schema["properties"]
+
+    def test_schema_has_title(self):
+        schema = generate_json_schema()
+        assert schema.get("title") == "Profile"
+
+
+# ── ProfileValidationError ───────────────────────────────────
+
+
+class TestProfileValidationError:
+    def test_carries_issues(self):
+        issues = [
+            ProfileIssue(
+                location="columns[0].stats.mean",
+                problem="missing required field",
+                suggestion="Add 'mean' to the stats block.",
+            ),
+        ]
+        exc = ProfileValidationError("test", issues=issues)
+        assert len(exc.issues) == 1
+        assert exc.issues[0].severity == "error"
+
+    def test_empty_issues_by_default(self):
+        exc = ProfileValidationError("test")
+        assert exc.issues == []
