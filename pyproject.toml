@@ -18,6 +18,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.4",
     "polars>=1.39.3",
+    "pydantic>=2.12.5",
     "rstr>=3.2.2",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.1",
