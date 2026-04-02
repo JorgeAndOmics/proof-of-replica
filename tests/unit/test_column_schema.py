@@ -7,16 +7,19 @@ from proof_of_replica.core.column_schema import (
     BooleanStats,
     CategoricalStats,
     ColumnConstraints,
+    ColumnDefinition,
     ColumnOverrides,
     DateStats,
     DistributionConfig,
+    GeneratorConfig,
     GroupEffect,
     GroupEffects,
+    LengthDistribution,
     NumericStats,
     StringStats,
     ValidationOverrides,
 )
-from proof_of_replica.core.enums import DistributionFamily
+from proof_of_replica.core.enums import ColumnDtype, ColumnRole, DistributionFamily
 
 # ── NumericStats ──────────────────────────────────────────────
 
@@ -204,3 +207,162 @@ class TestValidationOverrides:
         v = ValidationOverrides(ks_pvalue=0.1)
         assert v.ks_pvalue == 0.1
         assert v.null_tolerance is None
+
+
+# ── LengthDistribution ──────────────────────────────────────
+
+
+class TestLengthDistribution:
+    def test_defaults(self):
+        ld = LengthDistribution()
+        assert ld.distribution == "normal"
+
+    def test_with_params(self):
+        ld = LengthDistribution(distribution="normal", mean=150, std=20, min=50)
+        assert ld.mean == 150
+
+
+# ── GeneratorConfig ──────────────────────────────────────────
+
+
+class TestGeneratorConfig:
+    def test_sequential(self):
+        gen = GeneratorConfig(method="sequential", prefix="SAMPLE_", zero_pad=4)
+        assert gen.prefix == "SAMPLE_"
+        assert gen.zero_pad == 4
+
+    def test_uuid(self):
+        gen = GeneratorConfig(method="uuid")
+        assert gen.unique is False
+
+    def test_regex_requires_pattern(self):
+        with pytest.raises(ValidationError, match="requires 'pattern'"):
+            GeneratorConfig(method="regex")
+
+    def test_regex_with_pattern(self):
+        gen = GeneratorConfig(method="regex", pattern=r"ENSG[0-9]{11}", unique=True)
+        assert gen.pattern == r"ENSG[0-9]{11}"
+        assert gen.unique is True
+
+    def test_alphabet_requires_chars(self):
+        with pytest.raises(ValidationError, match="requires 'chars'"):
+            GeneratorConfig(method="alphabet")
+
+    def test_alphabet_with_length(self):
+        gen = GeneratorConfig(
+            method="alphabet",
+            chars="ACGT",
+            weights=[0.29, 0.21, 0.21, 0.29],
+            length=LengthDistribution(mean=150, std=20, min=50),
+        )
+        assert gen.chars == "ACGT"
+        assert gen.length is not None
+        assert gen.length.mean == 150
+
+    def test_placeholder(self):
+        gen = GeneratorConfig(method="placeholder", placeholder_value="[REDACTED]")
+        assert gen.placeholder_value == "[REDACTED]"
+
+    def test_rejects_extra_fields(self):
+        with pytest.raises(ValidationError):
+            GeneratorConfig(method="uuid", bogus="x")  # type: ignore[call-arg]
+
+    def test_json_round_trip(self):
+        gen = GeneratorConfig(method="regex", pattern=r"ID_\d+", unique=True)
+        restored = GeneratorConfig.model_validate(gen.model_dump())
+        assert restored == gen
+
+
+# ── ColumnDefinition ─────────────────────────────────────────
+
+
+class TestColumnDefinition:
+    def test_minimal(self):
+        col = ColumnDefinition(name="age", dtype="float64")
+        assert col.name == "age"
+        assert col.dtype == ColumnDtype.FLOAT64
+        assert col.role == ColumnRole.FEATURE
+        assert col.stats is None
+
+    def test_with_numeric_stats(self):
+        col = ColumnDefinition(
+            name="age",
+            dtype="float64",
+            stats={"mean": 52.3, "std": 14.7},
+        )
+        assert isinstance(col.stats, NumericStats)
+        assert col.stats.mean == 52.3
+
+    def test_with_categorical_stats(self):
+        col = ColumnDefinition(
+            name="condition",
+            dtype="categorical",
+            role="group",
+            stats={"cardinality": 3, "value_counts": {"a": 0.5, "b": 0.5}},
+        )
+        assert isinstance(col.stats, CategoricalStats)
+        assert col.stats.cardinality == 3
+
+    def test_with_boolean_stats(self):
+        col = ColumnDefinition(
+            name="is_control",
+            dtype="boolean",
+            stats={"true_fraction": 0.4},
+        )
+        assert isinstance(col.stats, BooleanStats)
+
+    def test_with_date_stats(self):
+        col = ColumnDefinition(
+            name="measurement_date",
+            dtype="date",
+            stats={"min": "2020-01-15", "max": "2025-11-30"},
+        )
+        assert isinstance(col.stats, DateStats)
+
+    def test_with_string_stats(self):
+        col = ColumnDefinition(
+            name="notes",
+            dtype="string",
+            stats={"null_fraction": 0.6, "mean_length": 42},
+        )
+        assert isinstance(col.stats, StringStats)
+
+    def test_with_all_optional_blocks(self):
+        col = ColumnDefinition(
+            name="gene_expr",
+            dtype="float64",
+            role="feature",
+            stats={"mean": 10.0, "std": 2.0},
+            distribution={"family": "lognormal", "params": {"s": 0.8}},
+            constraints={"min": 0.0},
+            group_effects={
+                "group_column": "condition",
+                "effects": {"healthy": {"shift": 0.0, "scale_factor": 1.0}},
+            },
+            overrides={"noise_level": 0.1},
+        )
+        assert col.distribution is not None
+        assert col.distribution.family == DistributionFamily.LOGNORMAL
+        assert col.group_effects is not None
+        assert col.constraints is not None
+
+    def test_json_round_trip(self):
+        col = ColumnDefinition(
+            name="sample_id",
+            dtype="string",
+            role="identifier",
+            generator={"method": "sequential", "prefix": "S_", "zero_pad": 4},
+        )
+        data = col.model_dump()
+        restored = ColumnDefinition.model_validate(data)
+        assert restored == col
+        assert restored.generator is not None
+        assert restored.generator.prefix == "S_"
+
+    def test_rejects_extra_fields(self):
+        with pytest.raises(ValidationError):
+            ColumnDefinition(
+                name="x",
+                dtype="float64",
+                bogus=True,  # type: ignore[call-arg]
+            )
