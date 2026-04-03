@@ -46,7 +46,7 @@ def _sample_parametric(
     float_params = {k: float(v) for k, v in params.items()}
 
     dist_cls = _FAMILY_TO_SCIPY.get(family)
-    if dist_cls is None:
+    if dist_cls is None:  # pragma: no cover — empirical families handled separately
         msg = f"Unsupported distribution family: {family}"
         raise GenerationError(msg)
 
@@ -89,15 +89,15 @@ def _sample_empirical_histogram(
         msg = "empirical_histogram requires 'edges' and 'counts' in params"
         raise GenerationError(msg)
 
-    # Handle both list (from Pydantic) and string (from JSON) representations
+    # Params are always strings (Pydantic enforces float|str, lists come as JSON strings)
     if isinstance(edges_raw, str):
         edges = np.array(json.loads(edges_raw), dtype=np.float64)
-    else:
+    else:  # pragma: no cover — Pydantic enforces str for list-like params
         edges = np.array(edges_raw, dtype=np.float64)
 
     if isinstance(counts_raw, str):
         counts = np.array(json.loads(counts_raw), dtype=np.float64)
-    else:
+    else:  # pragma: no cover
         counts = np.array(counts_raw, dtype=np.float64)
 
     # Normalize counts to probabilities

@@ -48,7 +48,9 @@ def induce_correlation(
 
     try:
         chol = np.linalg.cholesky(target)
-    except np.linalg.LinAlgError as exc:
+    except (
+        np.linalg.LinAlgError
+    ) as exc:  # pragma: no cover — _nearest_psd prevents this
         msg = "Target correlation matrix is not positive semi-definite"
         raise GenerationError(msg) from exc
 

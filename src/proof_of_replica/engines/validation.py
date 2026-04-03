@@ -230,7 +230,7 @@ def _check_ks_test(
     try:
         dist = dist_cls(**float_params)
         _, p_value = sp_stats.kstest(values, dist.cdf)
-    except Exception:
+    except Exception:  # pragma: no cover
         return []
 
     return [

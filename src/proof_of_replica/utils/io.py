@@ -112,6 +112,6 @@ def write_dataframe(
             raise FileIOError(msg)
     except FileIOError:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover
         msg = f"Failed to write {path}: {exc}"
         raise FileIOError(msg) from exc

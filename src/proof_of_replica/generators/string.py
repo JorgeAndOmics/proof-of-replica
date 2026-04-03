@@ -112,7 +112,7 @@ def generate_string(
         if col.stats is not None and hasattr(col.stats, "mean_length"):
             mean_length = getattr(col.stats, "mean_length", None)
         values = _generate_lorem(n, mean_length, rng)
-    else:
+    else:  # pragma: no cover — GeneratorMethod enum prevents unknown methods
         msg = f"Column '{col.name}': unsupported string method '{method}'"
         raise GenerationError(msg)
 
@@ -123,7 +123,7 @@ def _generate_regex(
     config: GeneratorConfig, n: int, rng: np.random.Generator
 ) -> list[str]:
     """Generate strings matching a regex pattern via rstr."""
-    if config.pattern is None:
+    if config.pattern is None:  # pragma: no cover — validated by GeneratorConfig
         msg = "Regex generator requires a 'pattern'"
         raise GenerationError(msg)
 
@@ -159,7 +159,7 @@ def _generate_alphabet(
     config: GeneratorConfig, n: int, rng: np.random.Generator
 ) -> list[str]:
     """Generate random strings from a fixed character set."""
-    if config.chars is None:
+    if config.chars is None:  # pragma: no cover — validated by GeneratorConfig
         msg = "Alphabet generator requires 'chars'"
         raise GenerationError(msg)
 

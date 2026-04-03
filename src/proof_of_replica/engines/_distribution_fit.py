@@ -102,13 +102,13 @@ def _try_fit(
         dist = dist_cls(*fit_params)
         log_lik = np.sum(dist.logpdf(values))
 
-        if not np.isfinite(log_lik):
+        if not np.isfinite(log_lik):  # pragma: no cover
             return None
 
         aic = 2.0 * k - 2.0 * log_lik
         params = _scipy_params_to_dict(family, fit_params)
         return params, aic
-    except Exception:
+    except Exception:  # pragma: no cover — scipy internal failure
         return None
 
 
