@@ -15,6 +15,7 @@ from proof_of_replica.core.schema import Profile, load_profile, merge_overrides
 if TYPE_CHECKING:
     import polars as pl
 from proof_of_replica.engines.generation import generate
+from proof_of_replica.engines.hooks import load_and_run_hook
 from proof_of_replica.engines.validation import validate
 from proof_of_replica.utils.io import write_dataframe
 
@@ -46,6 +47,13 @@ from proof_of_replica.utils.io import write_dataframe
     "--split", type=float, default=None, help="Train/test split ratio (e.g. 0.8)."
 )
 @click.option(
+    "--hook",
+    "hook_path",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    help="Post-generation hook file.",
+)
+@click.option(
     "--validate",
     "validate_mode",
     type=click.Choice(["off", "warn", "fail"]),
@@ -62,6 +70,7 @@ def generate_cmd(
     override_file: Path | None,
     variants: int | None,
     split: float | None,
+    hook_path: Path | None,
     validate_mode: str,
     verbose: int,
 ) -> None:
@@ -83,14 +92,39 @@ def generate_cmd(
 
     if variants is not None:
         _generate_variants(
-            profile, variants, base_seed, rows, fmt, output, validate_mode, verbose
+            profile,
+            variants,
+            base_seed,
+            rows,
+            fmt,
+            output,
+            hook_path,
+            validate_mode,
+            verbose,
         )
     elif split is not None:
         _generate_split(
-            profile, split, base_seed, rows, fmt, output, validate_mode, verbose
+            profile,
+            split,
+            base_seed,
+            rows,
+            fmt,
+            output,
+            hook_path,
+            validate_mode,
+            verbose,
         )
     else:
-        _generate_single(profile, base_seed, rows, fmt, output, validate_mode, verbose)
+        _generate_single(
+            profile, base_seed, rows, fmt, output, hook_path, validate_mode, verbose
+        )
+
+
+def _apply_hook(df: pl.DataFrame, hook_path: Path | None) -> pl.DataFrame:
+    """Apply a post-generation hook if specified."""
+    if hook_path is not None:
+        return load_and_run_hook(hook_path, df)
+    return df
 
 
 def _generate_single(
@@ -99,11 +133,13 @@ def _generate_single(
     rows: int | None,
     fmt: str,
     output: Path | None,
+    hook_path: Path | None,
     validate_mode: str,
     verbose: int,
 ) -> None:
     """Generate a single replica."""
     df = generate(profile, row_count=rows, seed=seed)
+    df = _apply_hook(df, hook_path)
     output_path = output or Path(f"replica.{fmt}")
     write_dataframe(df, output_path)
 
@@ -120,6 +156,7 @@ def _generate_variants(
     rows: int | None,
     fmt: str,
     output: Path | None,
+    hook_path: Path | None,
     validate_mode: str,
     verbose: int,
 ) -> None:
@@ -132,6 +169,7 @@ def _generate_variants(
     for i in range(n):
         variant_seed = base_seed + i
         df = generate(profile, row_count=rows, seed=variant_seed)
+        df = _apply_hook(df, hook_path)
         variant_path = parent / f"{stem}_{i + 1:03d}{suffix}"
         write_dataframe(df, variant_path)
 
@@ -148,11 +186,13 @@ def _generate_split(
     rows: int | None,
     fmt: str,
     output: Path | None,
+    hook_path: Path | None,
     validate_mode: str,
     verbose: int,
 ) -> None:
     """Generate a single DataFrame and split into train/test."""
     df = generate(profile, row_count=rows, seed=seed)
+    df = _apply_hook(df, hook_path)
     split_idx = int(len(df) * ratio)
 
     train_df = df.head(split_idx)
