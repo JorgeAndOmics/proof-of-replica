@@ -64,6 +64,8 @@ class TestGeneratorMethod:
             "weighted_choice",
             "placeholder",
             "lorem",
+            "template",
+            "grammar",
         }
         assert {m.value for m in GeneratorMethod} == expected
 

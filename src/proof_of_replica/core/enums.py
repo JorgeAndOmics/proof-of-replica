@@ -48,6 +48,8 @@ class GeneratorMethod(StrEnum):
     WEIGHTED_CHOICE = "weighted_choice"
     PLACEHOLDER = "placeholder"
     LOREM = "lorem"
+    TEMPLATE = "template"
+    GRAMMAR = "grammar"
 
 
 class CorrelationMethod(StrEnum):

@@ -174,6 +174,11 @@ class GeneratorConfig(BaseModel):
     length: LengthDistribution | None = None
     placeholder_value: str | None = None
     inferred: bool | None = None
+    # Template generator fields
+    template_str: str | None = None
+    parts: dict[str, dict[str, object]] | None = None
+    # Grammar generator fields
+    rules: dict[str, list[str]] | None = None
 
     @model_validator(mode="after")
     def _check_method_fields(self) -> "GeneratorConfig":
@@ -184,6 +189,14 @@ class GeneratorConfig(BaseModel):
             raise ValueError(msg)
         if method == GeneratorMethod.ALPHABET and not self.chars:
             msg = "Generator method 'alphabet' requires 'chars'"
+            raise ValueError(msg)
+        if method == GeneratorMethod.TEMPLATE and (
+            not self.template_str or not self.parts
+        ):
+            msg = "Generator method 'template' requires 'template_str' and 'parts'"
+            raise ValueError(msg)
+        if method == GeneratorMethod.GRAMMAR and not self.rules:
+            msg = "Generator method 'grammar' requires 'rules'"
             raise ValueError(msg)
         return self
 

@@ -263,6 +263,35 @@ class TestGeneratorConfig:
         gen = GeneratorConfig(method="placeholder", placeholder_value="[REDACTED]")
         assert gen.placeholder_value == "[REDACTED]"
 
+    def test_template_generator(self):
+        gen = GeneratorConfig(
+            method="template",
+            template_str="{a}:{b}",
+            parts={
+                "a": {"type": "choice", "values": ["X", "Y"]},
+                "b": {"type": "integer_range", "min": 1, "max": 100},
+            },
+        )
+        assert gen.template_str == "{a}:{b}"
+        assert gen.parts is not None
+
+    def test_template_requires_parts(self):
+        with pytest.raises(
+            ValidationError, match="requires 'template_str' and 'parts'"
+        ):
+            GeneratorConfig(method="template", template_str="{x}")
+
+    def test_grammar_generator(self):
+        gen = GeneratorConfig(
+            method="grammar",
+            rules={"start": ["{a}"], "a": ["X", "Y"]},
+        )
+        assert gen.rules is not None
+
+    def test_grammar_requires_rules(self):
+        with pytest.raises(ValidationError, match="requires 'rules'"):
+            GeneratorConfig(method="grammar")
+
     def test_rejects_extra_fields(self):
         with pytest.raises(ValidationError):
             GeneratorConfig(method="uuid", bogus="x")  # type: ignore[call-arg]
@@ -271,6 +300,18 @@ class TestGeneratorConfig:
         gen = GeneratorConfig(method="regex", pattern=r"ID_\d+", unique=True)
         restored = GeneratorConfig.model_validate(gen.model_dump())
         assert restored == gen
+
+    def test_template_json_round_trip(self):
+        gen = GeneratorConfig(
+            method="template",
+            template_str="{x}-{y}",
+            parts={
+                "x": {"type": "choice", "values": ["A"]},
+                "y": {"type": "regex", "pattern": r"\d{3}"},
+            },
+        )
+        restored = GeneratorConfig.model_validate(gen.model_dump())
+        assert restored.template_str == "{x}-{y}"
 
 
 # ── ColumnDefinition ─────────────────────────────────────────

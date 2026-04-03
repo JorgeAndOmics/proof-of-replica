@@ -643,6 +643,52 @@
           ],
           "default": null,
           "title": "Inferred"
+        },
+        "template_str": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Template Str"
+        },
+        "parts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parts"
+        },
+        "rules": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rules"
         }
       },
       "required": [
@@ -661,7 +707,9 @@
         "alphabet",
         "weighted_choice",
         "placeholder",
-        "lorem"
+        "lorem",
+        "template",
+        "grammar"
       ],
       "title": "GeneratorMethod",
       "type": "string"
