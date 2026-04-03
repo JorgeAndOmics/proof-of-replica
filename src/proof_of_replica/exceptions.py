@@ -41,3 +41,11 @@ class GenerationError(ProofOfReplicaError):
 
 class ValidationError(ProofOfReplicaError):
     """Raised when replica validation fails."""
+
+
+class FileIOError(ProofOfReplicaError):
+    """Raised when file I/O fails."""
+
+
+class ProfilingError(ProofOfReplicaError):
+    """Raised when profiling fails."""
