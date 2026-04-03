@@ -60,6 +60,6 @@ def _configure_logging(verbose: int) -> None:
     level = logging.WARNING
     if verbose == 1:
         level = logging.INFO
-    elif verbose >= 2:
+    elif verbose >= 2:  # pragma: no cover
         level = logging.DEBUG
     logging.basicConfig(level=level, stream=sys.stderr)

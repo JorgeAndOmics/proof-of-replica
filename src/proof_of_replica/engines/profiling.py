@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import warnings
 from datetime import UTC, datetime
 
 import numpy as np
@@ -167,14 +168,19 @@ def _extract_numeric_stats(
     if len(values) == 0:
         return NumericStats(null_fraction=1.0), None
 
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        skew_val = float(sp_stats.skew(values)) if len(values) > 2 else 0.0
+        kurt_val = float(sp_stats.kurtosis(values)) if len(values) > 3 else 0.0
+
     stats = NumericStats(
         mean=float(np.mean(values)),
         std=float(np.std(values, ddof=1)) if len(values) > 1 else 0.0,
         min=float(np.min(values)),
         max=float(np.max(values)),
         median=float(np.median(values)),
-        skewness=float(sp_stats.skew(values)) if len(values) > 2 else 0.0,
-        kurtosis=float(sp_stats.kurtosis(values)) if len(values) > 3 else 0.0,
+        skewness=skew_val if np.isfinite(skew_val) else 0.0,
+        kurtosis=kurt_val if np.isfinite(kurt_val) else 0.0,
         null_fraction=series.null_count() / len(series) if len(series) > 0 else 0.0,
         percentiles={
             "5": float(np.percentile(values, 5)),
@@ -225,13 +231,18 @@ def _extract_date_stats(series: pl.Series) -> DateStats:
 
 def _extract_string_stats(series: pl.Series) -> StringStats:
     """Extract statistics for a string column."""
-    non_null = series.drop_nulls()
-    lengths = non_null.str.len_bytes()
+    non_null = series.drop_nulls().cast(pl.Utf8, strict=False)
 
+    if len(non_null) == 0:
+        return StringStats(
+            null_fraction=series.null_count() / max(len(series), 1),
+        )
+
+    lengths = non_null.str.len_bytes()
     return StringStats(
         null_fraction=series.null_count() / len(series) if len(series) > 0 else 0.0,
-        mean_length=float(lengths.mean()) if len(non_null) > 0 else None,  # type: ignore[arg-type]
-        max_length=int(lengths.max()) if len(non_null) > 0 else None,  # type: ignore[arg-type]
+        mean_length=float(lengths.mean()),  # type: ignore[arg-type]
+        max_length=int(lengths.max()),  # type: ignore[arg-type]
     )
 
 
