@@ -1119,6 +1119,18 @@
           "minimum": 0.0,
           "title": "Correlation Frobenius",
           "type": "number"
+        },
+        "k_anonymity_k": {
+          "default": 5,
+          "minimum": 1,
+          "title": "K Anonymity K",
+          "type": "integer"
+        },
+        "quasi_id_max_k": {
+          "default": 5,
+          "minimum": 1,
+          "title": "Quasi Id Max K",
+          "type": "integer"
         }
       },
       "title": "ValidationConfig",

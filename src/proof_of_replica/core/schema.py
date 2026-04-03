@@ -52,6 +52,8 @@ class ValidationConfig(BaseModel):
     range_tolerance: float = Field(default=0.05, ge=0.0)
     boolean_tolerance: float = Field(default=0.05, ge=0.0, le=1.0)
     correlation_frobenius: float = Field(default=0.1, ge=0.0)
+    k_anonymity_k: int = Field(default=5, ge=1)
+    quasi_id_max_k: int = Field(default=5, ge=1)
 
 
 # ── Correlation config ───────────────────────────────────────

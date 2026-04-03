@@ -68,6 +68,8 @@ class TestValidationConfig:
         assert v.range_tolerance == 0.05
         assert v.boolean_tolerance == 0.05
         assert v.correlation_frobenius == 0.1
+        assert v.k_anonymity_k == 5
+        assert v.quasi_id_max_k == 5
 
     def test_value_range(self):
         with pytest.raises(ValidationError):
