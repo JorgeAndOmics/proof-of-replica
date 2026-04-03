@@ -141,6 +141,43 @@ class TestGenerateCommand:
         )
         assert result.exit_code == 1
 
+    def test_generate_with_override_json(self, runner, sample_profile, tmp_path):
+        output = tmp_path / "replica.parquet"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                str(sample_profile),
+                "-o",
+                str(output),
+                "--override",
+                '{"seed": 99}',
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_generate_with_override_file(self, runner, sample_profile, tmp_path):
+        override_path = tmp_path / "overrides.json"
+        override_path.write_text('{"row_count": 25}')
+        output = tmp_path / "replica.parquet"
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                str(sample_profile),
+                "-o",
+                str(output),
+                "--override-file",
+                str(override_path),
+                "--rows",
+                "25",
+            ],
+        )
+        assert result.exit_code == 0
+        df = pl.read_parquet(output)
+        assert len(df) == 25
+
 
 class TestValidateCommand:
     def test_basic_validate(self, runner, sample_profile, tmp_path):

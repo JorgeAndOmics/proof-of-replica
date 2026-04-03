@@ -193,3 +193,40 @@ def generate_json_schema() -> dict[str, Any]:
         to ``profile.schema.json``.
     """
     return Profile.model_json_schema()
+
+
+def merge_overrides(profile: Profile, overrides: dict[str, Any]) -> Profile:
+    """Merge override values onto a profile, returning a new Profile.
+
+    Performs a shallow merge at the top level. For the ``columns`` key,
+    merges per-column by matching on column name.
+
+    Args:
+        profile: The base profile.
+        overrides: Dict of values to merge (same structure as profile JSON).
+
+    Returns:
+        A new validated Profile with overrides applied.
+
+    Raises:
+        ProfileValidationError: If the merged result fails validation.
+    """
+    base = profile.model_dump(mode="json", exclude_none=True)
+
+    column_overrides = overrides.pop("columns", None)
+    base.update(overrides)
+
+    if column_overrides is not None and isinstance(column_overrides, list):
+        col_map = {c["name"]: i for i, c in enumerate(base["columns"])}
+        for col_override in column_overrides:
+            name = col_override.get("name")
+            if name and name in col_map:
+                idx = col_map[name]
+                base["columns"][idx].update(col_override)
+
+    try:
+        return Profile.model_validate(base)
+    except ValidationError as exc:
+        issues = _pydantic_error_to_issues(exc)
+        msg = f"Override merge failed with {len(issues)} error(s)"
+        raise ProfileValidationError(msg, issues=issues) from exc

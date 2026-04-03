@@ -17,6 +17,7 @@ from proof_of_replica.core.schema import (
     ValidationConfig,
     generate_json_schema,
     load_profile,
+    merge_overrides,
     save_profile,
 )
 from proof_of_replica.exceptions import (
@@ -304,3 +305,63 @@ class TestProfileValidationError:
     def test_empty_issues_by_default(self):
         exc = ProfileValidationError("test")
         assert exc.issues == []
+
+
+# ── merge_overrides ──────────────────────────────────────────
+
+
+class TestMergeOverrides:
+    def test_override_seed(self):
+        p = Profile(
+            version="0.2.0",
+            seed=42,
+            columns=[
+                ColumnDefinition(name="x", dtype="float64", stats={"mean": 0, "std": 1})
+            ],
+        )
+        result = merge_overrides(p, {"seed": 99})
+        assert result.seed == 99
+
+    def test_override_row_count(self):
+        p = Profile(
+            version="0.2.0",
+            row_count=100,
+            columns=[
+                ColumnDefinition(name="x", dtype="float64", stats={"mean": 0, "std": 1})
+            ],
+        )
+        result = merge_overrides(p, {"row_count": 50})
+        assert result.row_count == 50
+
+    def test_override_column_stats(self):
+        p = Profile(
+            version="0.2.0",
+            columns=[
+                ColumnDefinition(name="x", dtype="float64", stats={"mean": 0, "std": 1})
+            ],
+        )
+        result = merge_overrides(
+            p, {"columns": [{"name": "x", "stats": {"mean": 99.0, "std": 1.0}}]}
+        )
+        assert result.columns[0].stats is not None
+        assert result.columns[0].stats.mean == 99.0
+
+    def test_empty_overrides(self):
+        p = Profile(
+            version="0.2.0",
+            columns=[
+                ColumnDefinition(name="x", dtype="float64", stats={"mean": 0, "std": 1})
+            ],
+        )
+        result = merge_overrides(p, {})
+        assert result.seed == p.seed
+
+    def test_invalid_override_raises(self):
+        p = Profile(
+            version="0.2.0",
+            columns=[
+                ColumnDefinition(name="x", dtype="float64", stats={"mean": 0, "std": 1})
+            ],
+        )
+        with pytest.raises(ProfileValidationError):
+            merge_overrides(p, {"version": 123})
