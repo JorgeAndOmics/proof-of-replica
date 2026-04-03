@@ -178,6 +178,67 @@ class TestGenerateCommand:
         df = pl.read_parquet(output)
         assert len(df) == 25
 
+    def test_generate_variants(self, runner, sample_profile, tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                str(sample_profile),
+                "-o",
+                str(tmp_path / "replica.parquet"),
+                "--variants",
+                "3",
+                "--validate",
+                "off",
+            ],
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / "replica_001.parquet").exists()
+        assert (tmp_path / "replica_002.parquet").exists()
+        assert (tmp_path / "replica_003.parquet").exists()
+
+    def test_generate_split(self, runner, sample_profile, tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                str(sample_profile),
+                "-o",
+                str(tmp_path / "data.parquet"),
+                "--split",
+                "0.8",
+                "--validate",
+                "off",
+            ],
+        )
+        assert result.exit_code == 0
+        train = tmp_path / "data_train.parquet"
+        test = tmp_path / "data_test.parquet"
+        assert train.exists()
+        assert test.exists()
+        train_df = pl.read_parquet(train)
+        test_df = pl.read_parquet(test)
+        assert len(train_df) + len(test_df) == 50
+
+    def test_variants_and_split_mutually_exclusive(
+        self, runner, sample_profile, tmp_path
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "generate",
+                str(sample_profile),
+                "-o",
+                str(tmp_path / "r.parquet"),
+                "--variants",
+                "3",
+                "--split",
+                "0.8",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+
 
 class TestValidateCommand:
     def test_basic_validate(self, runner, sample_profile, tmp_path):
