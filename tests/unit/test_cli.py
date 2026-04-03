@@ -199,3 +199,61 @@ class TestValidateCommand:
         data = json.loads(result.output)
         assert "passed" in data
         assert "checks" in data
+
+    def test_validate_report_file_text(self, runner, sample_profile, tmp_path):
+        replica = tmp_path / "replica.parquet"
+        runner.invoke(app, ["generate", str(sample_profile), "-o", str(replica)])
+        report = tmp_path / "report.txt"
+
+        result = runner.invoke(
+            app,
+            ["validate", str(replica), str(sample_profile), "--report", str(report)],
+        )
+        assert result.exit_code == 0
+        assert report.exists()
+        assert "Summary" in report.read_text()
+
+    def test_validate_report_file_json(self, runner, sample_profile, tmp_path):
+        replica = tmp_path / "replica.parquet"
+        runner.invoke(app, ["generate", str(sample_profile), "-o", str(replica)])
+        report = tmp_path / "report.json"
+
+        result = runner.invoke(
+            app,
+            [
+                "validate",
+                str(replica),
+                str(sample_profile),
+                "--format",
+                "json",
+                "--report",
+                str(report),
+            ],
+        )
+        assert result.exit_code == 0
+        assert report.exists()
+        data = json.loads(report.read_text())
+        assert "passed" in data
+
+    def test_validate_html_format(self, runner, sample_profile, tmp_path):
+        replica = tmp_path / "replica.parquet"
+        runner.invoke(app, ["generate", str(sample_profile), "-o", str(replica)])
+        report = tmp_path / "report.html"
+
+        result = runner.invoke(
+            app,
+            [
+                "validate",
+                str(replica),
+                str(sample_profile),
+                "--format",
+                "html",
+                "--report",
+                str(report),
+            ],
+        )
+        assert result.exit_code == 0
+        assert report.exists()
+        content = report.read_text()
+        assert "<html>" in content
+        assert "Validation Report" in content
