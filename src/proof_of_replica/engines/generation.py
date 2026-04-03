@@ -11,6 +11,7 @@ from proof_of_replica.core.column_schema import (
 )
 from proof_of_replica.core.enums import ColumnDtype, ColumnRole
 from proof_of_replica.core.schema import Profile
+from proof_of_replica.engines.cross_constraints import apply_cross_constraints
 from proof_of_replica.exceptions import GenerationError
 from proof_of_replica.generators.boolean import generate_boolean
 from proof_of_replica.generators.categorical import generate_categorical
@@ -89,6 +90,10 @@ def generate(
                     col_def.name
                 )
             )
+
+    # Apply cross-column constraints
+    if profile.constraints is not None:
+        df = apply_cross_constraints(df, profile.constraints)
 
     # Inject missingness
     df = inject_missingness(df, profile, rng)
