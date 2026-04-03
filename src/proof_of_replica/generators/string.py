@@ -9,6 +9,8 @@ from rstr.xeger import Xeger
 from proof_of_replica.core.column_schema import ColumnDefinition, GeneratorConfig
 from proof_of_replica.core.enums import GeneratorMethod
 from proof_of_replica.exceptions import GenerationError
+from proof_of_replica.generators.grammar import generate_grammar_strings
+from proof_of_replica.generators.template import generate_template_strings
 
 _LOREM_WORDS = [
     "lorem",
@@ -112,6 +114,10 @@ def generate_string(
         if col.stats is not None and hasattr(col.stats, "mean_length"):
             mean_length = getattr(col.stats, "mean_length", None)
         values = _generate_lorem(n, mean_length, rng)
+    elif method == GeneratorMethod.TEMPLATE:
+        values = generate_template_strings(col.generator, n, rng)
+    elif method == GeneratorMethod.GRAMMAR:
+        values = generate_grammar_strings(col.generator, n, rng)
     else:  # pragma: no cover — GeneratorMethod enum prevents unknown methods
         msg = f"Column '{col.name}': unsupported string method '{method}'"
         raise GenerationError(msg)
