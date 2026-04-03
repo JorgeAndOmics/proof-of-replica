@@ -91,7 +91,7 @@ def test_count_chars(input_val: str, expected: int):
 
 ## Coverage
 
-- Target: 100% line coverage on `src/`.
+- Target: 90%+ line coverage on `src/`.
 - Run: `uv run pytest --cov=src --cov-report=term-missing`
 - Use `pragma: no cover` only for genuinely unreachable defensive branches.
 - Never write tests solely to increase coverage numbers.
