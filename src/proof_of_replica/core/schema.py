@@ -124,6 +124,7 @@ class Profile(BaseModel):
     missingness: MissingnessConfig | None = None
     constraints: CrossConstraintBlock | None = None
     hooks: dict[str, str] | None = None
+    privacy: dict[str, object] | None = None
 
 
 # ── Profile I/O ──────────────────────────────────────────────

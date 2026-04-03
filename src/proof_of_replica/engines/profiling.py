@@ -27,6 +27,11 @@ from proof_of_replica.core.schema import (
     ProfilerConfig,
 )
 from proof_of_replica.engines._distribution_fit import fit_distribution
+from proof_of_replica.engines._dp_noise import (
+    allocate_budget,
+    gaussian_mechanism,
+    laplace_mechanism,
+)
 from proof_of_replica.engines._type_inference import infer_dtype
 
 logger = logging.getLogger(__name__)
@@ -39,6 +44,9 @@ def profile_dataframe(
     group_column: str | None = None,
     seed: int = 42,
     config: ProfilerConfig | None = None,
+    dp: bool = False,
+    epsilon: float = 1.0,
+    delta: float = 1e-5,
 ) -> Profile:
     """Extract a statistical profile from a DataFrame.
 
@@ -48,6 +56,9 @@ def profile_dataframe(
         group_column: Column name for group-level statistics.
         seed: Random seed stored in the profile.
         config: Profiler thresholds. Uses defaults if None.
+        dp: If True, apply differential privacy noise to all statistics.
+        epsilon: DP epsilon parameter (total budget).
+        delta: DP delta parameter.
 
     Returns:
         A validated Profile instance.
@@ -56,10 +67,20 @@ def profile_dataframe(
     n_rows = len(df)
     columns: list[ColumnDefinition] = []
 
+    # DP setup
+    dp_rng = np.random.default_rng(seed) if dp else None
+    n_columns = len(df.columns)
+    if dp:
+        per_eps, per_delta = allocate_budget(max(n_columns, 1), epsilon, delta)
+    else:
+        per_eps, per_delta = epsilon, delta
+
     for col_name in df.columns:
         series = df[col_name]
         dtype = infer_dtype(series, n_rows, cfg)
         col_def = _profile_column(series, dtype, n_rows, cfg, group_column, df)
+        if dp and dp_rng is not None:
+            col_def = _apply_dp_to_column(col_def, per_eps, per_delta, dp_rng)
         columns.append(col_def)
 
     corr_config = None
@@ -70,6 +91,15 @@ def profile_dataframe(
         f"{n_rows}:{','.join(df.columns)}".encode()
     ).hexdigest()
 
+    privacy_block = None
+    if dp:
+        privacy_block = {
+            "mechanism": "differential_privacy",
+            "epsilon": epsilon,
+            "delta": delta,
+            "composition": "sequential",
+        }
+
     return Profile(
         version="0.2.0",
         created_at=datetime.now(tz=UTC).isoformat(),
@@ -79,7 +109,57 @@ def profile_dataframe(
         profiler=cfg,
         columns=columns,
         correlations=corr_config,
+        privacy=privacy_block,
     )
+
+
+def _apply_dp_to_column(
+    col_def: ColumnDefinition,
+    epsilon: float,
+    delta: float,
+    rng: np.random.Generator,
+) -> ColumnDefinition:
+    """Apply DP noise to a column's extracted statistics."""
+
+    if col_def.stats is None:
+        return col_def
+
+    stats = col_def.stats
+    noised: dict[str, object] = stats.model_dump()
+
+    if isinstance(stats, NumericStats):
+        sens = 1.0
+        if stats.mean is not None:
+            noised["mean"] = gaussian_mechanism(stats.mean, sens, epsilon, delta, rng)
+        if stats.std is not None:
+            noised["std"] = max(
+                0.01, gaussian_mechanism(stats.std, sens, epsilon, delta, rng)
+            )
+        if stats.min is not None:
+            noised["min"] = gaussian_mechanism(stats.min, sens, epsilon, delta, rng)
+        if stats.max is not None:
+            noised["max"] = gaussian_mechanism(stats.max, sens, epsilon, delta, rng)
+        noised["null_fraction"] = max(
+            0.0,
+            min(1.0, laplace_mechanism(stats.null_fraction, 1.0 / 100, epsilon, rng)),
+        )
+    elif isinstance(stats, CategoricalStats):
+        noised_vc = {}
+        for label, frac in stats.value_counts.items():
+            noised_vc[label] = max(
+                0.0, laplace_mechanism(frac, 1.0 / 100, epsilon, rng)
+            )
+        total = sum(noised_vc.values())
+        if total > 0:
+            noised_vc = {k: v / total for k, v in noised_vc.items()}
+        noised["value_counts"] = noised_vc
+    elif isinstance(stats, BooleanStats):
+        noised["true_fraction"] = max(
+            0.0,
+            min(1.0, laplace_mechanism(stats.true_fraction, 1.0 / 100, epsilon, rng)),
+        )
+
+    return ColumnDefinition.model_validate({**col_def.model_dump(), "stats": noised})
 
 
 def _profile_column(

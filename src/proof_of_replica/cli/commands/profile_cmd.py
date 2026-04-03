@@ -21,6 +21,9 @@ from proof_of_replica.utils.io import read_dataframe
 @click.option("--seed", type=int, default=42, help="Random seed.")
 @click.option("--correlations", is_flag=True, help="Compute correlation matrix.")
 @click.option("--group-column", type=str, default=None, help="Group column name.")
+@click.option("--dp", is_flag=True, help="Enable differential privacy mode.")
+@click.option("--epsilon", type=float, default=1.0, help="DP epsilon parameter.")
+@click.option("--delta", type=float, default=1e-5, help="DP delta parameter.")
 @click.option("-v", "--verbose", count=True, help="Increase verbosity.")
 def profile(
     input_file: Path,
@@ -30,6 +33,9 @@ def profile(
     seed: int,
     correlations: bool,
     group_column: str | None,
+    dp: bool,
+    epsilon: float,
+    delta: float,
     verbose: int,
 ) -> None:
     """Extract a statistical profile from real data."""
@@ -44,6 +50,9 @@ def profile(
         group_column=group_column,
         seed=seed,
         config=ProfilerConfig(),
+        dp=dp,
+        epsilon=epsilon,
+        delta=delta,
     )
 
     output_path = output or input_file.with_suffix(".profile.json")
