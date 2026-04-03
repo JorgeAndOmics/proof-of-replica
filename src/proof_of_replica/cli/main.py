@@ -9,6 +9,7 @@ from proof_of_replica.cli.commands.profile_cmd import profile
 from proof_of_replica.cli.commands.replicate_cmd import replicate
 from proof_of_replica.cli.commands.report_cmd import report
 from proof_of_replica.cli.commands.scaffold_cmd import scaffold
+from proof_of_replica.cli.commands.schema_cmd import schema
 from proof_of_replica.cli.commands.template_cmd import template
 from proof_of_replica.cli.commands.validate_cmd import validate_cmd
 
@@ -27,3 +28,4 @@ app.add_command(scaffold)
 app.add_command(replicate)
 app.add_command(diff_cmd, name="diff")
 app.add_command(report)
+app.add_command(schema)

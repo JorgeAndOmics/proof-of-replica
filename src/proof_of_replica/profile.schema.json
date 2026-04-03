@@ -1,0 +1,1114 @@
+{
+  "$defs": {
+    "BooleanStats": {
+      "additionalProperties": false,
+      "description": "Statistics for boolean columns.",
+      "properties": {
+        "true_fraction": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "True Fraction",
+          "type": "number"
+        },
+        "null_fraction": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Null Fraction",
+          "type": "number"
+        }
+      },
+      "required": [
+        "true_fraction"
+      ],
+      "title": "BooleanStats",
+      "type": "object"
+    },
+    "CategoricalStats": {
+      "additionalProperties": false,
+      "description": "Statistics for categorical columns.",
+      "properties": {
+        "cardinality": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cardinality"
+        },
+        "null_fraction": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Null Fraction",
+          "type": "number"
+        },
+        "value_counts": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Value Counts",
+          "type": "object"
+        }
+      },
+      "title": "CategoricalStats",
+      "type": "object"
+    },
+    "ColumnConstraints": {
+      "additionalProperties": false,
+      "description": "Per-column value constraints applied after generation.",
+      "properties": {
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "integer_valued": {
+          "default": false,
+          "title": "Integer Valued",
+          "type": "boolean"
+        }
+      },
+      "title": "ColumnConstraints",
+      "type": "object"
+    },
+    "ColumnDefinition": {
+      "additionalProperties": false,
+      "description": "A single column in the profile schema.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "dtype": {
+          "$ref": "#/$defs/ColumnDtype"
+        },
+        "role": {
+          "$ref": "#/$defs/ColumnRole",
+          "default": "feature"
+        },
+        "stats": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NumericStats"
+            },
+            {
+              "$ref": "#/$defs/CategoricalStats"
+            },
+            {
+              "$ref": "#/$defs/BooleanStats"
+            },
+            {
+              "$ref": "#/$defs/DateStats"
+            },
+            {
+              "$ref": "#/$defs/StringStats"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stats"
+        },
+        "distribution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DistributionConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "generator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratorConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "constraints": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColumnConstraints"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "group_effects": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GroupEffects"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "overrides": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColumnOverrides"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "validation_overrides": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValidationOverrides"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "dtype"
+      ],
+      "title": "ColumnDefinition",
+      "type": "object"
+    },
+    "ColumnDtype": {
+      "description": "Data types supported for profile columns.",
+      "enum": [
+        "string",
+        "float64",
+        "int64",
+        "categorical",
+        "boolean",
+        "date"
+      ],
+      "title": "ColumnDtype",
+      "type": "string"
+    },
+    "ColumnOverrides": {
+      "additionalProperties": false,
+      "description": "Per-column generation overrides merged over global defaults.",
+      "properties": {
+        "noise_level": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Noise Level"
+        }
+      },
+      "title": "ColumnOverrides",
+      "type": "object"
+    },
+    "ColumnRole": {
+      "description": "Semantic roles a column can play in the dataset.",
+      "enum": [
+        "identifier",
+        "feature",
+        "group",
+        "outcome",
+        "index"
+      ],
+      "title": "ColumnRole",
+      "type": "string"
+    },
+    "CorrelationConfig": {
+      "additionalProperties": false,
+      "description": "Pairwise correlation matrix for numeric columns.",
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "matrix": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Matrix",
+          "type": "array"
+        },
+        "method": {
+          "$ref": "#/$defs/CorrelationMethod",
+          "default": "pearson"
+        }
+      },
+      "required": [
+        "columns",
+        "matrix"
+      ],
+      "title": "CorrelationConfig",
+      "type": "object"
+    },
+    "CorrelationMethod": {
+      "description": "Correlation computation methods.",
+      "enum": [
+        "pearson",
+        "spearman",
+        "kendall"
+      ],
+      "title": "CorrelationMethod",
+      "type": "string"
+    },
+    "DateStats": {
+      "additionalProperties": false,
+      "description": "Statistics for date columns.",
+      "properties": {
+        "min": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "null_fraction": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Null Fraction",
+          "type": "number"
+        }
+      },
+      "title": "DateStats",
+      "type": "object"
+    },
+    "DefaultsConfig": {
+      "additionalProperties": false,
+      "description": "Global generation defaults.",
+      "properties": {
+        "noise_level": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Noise Level",
+          "type": "number"
+        },
+        "preserve_nulls": {
+          "default": true,
+          "title": "Preserve Nulls",
+          "type": "boolean"
+        }
+      },
+      "title": "DefaultsConfig",
+      "type": "object"
+    },
+    "DistributionConfig": {
+      "additionalProperties": false,
+      "description": "Parametric or empirical distribution specification.",
+      "properties": {
+        "family": {
+          "$ref": "#/$defs/DistributionFamily"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "family"
+      ],
+      "title": "DistributionConfig",
+      "type": "object"
+    },
+    "DistributionFamily": {
+      "description": "Parametric distribution families for column generation.",
+      "enum": [
+        "normal",
+        "lognormal",
+        "uniform",
+        "beta",
+        "gamma",
+        "exponential",
+        "empirical_kde",
+        "empirical_histogram"
+      ],
+      "title": "DistributionFamily",
+      "type": "string"
+    },
+    "GeneratorConfig": {
+      "additionalProperties": false,
+      "description": "Column value generator configuration.\n\nFields used depend on the generator method. A model validator\nchecks that required fields for the chosen method are present.",
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/GeneratorMethod"
+        },
+        "prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prefix"
+        },
+        "zero_pad": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zero Pad"
+        },
+        "unique": {
+          "default": false,
+          "title": "Unique",
+          "type": "boolean"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern"
+        },
+        "chars": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chars"
+        },
+        "weights": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weights"
+        },
+        "length": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LengthDistribution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "placeholder_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Placeholder Value"
+        },
+        "inferred": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inferred"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "GeneratorConfig",
+      "type": "object"
+    },
+    "GeneratorMethod": {
+      "description": "Methods for generating column values.",
+      "enum": [
+        "sequential",
+        "uuid",
+        "prefix_increment",
+        "regex",
+        "alphabet",
+        "weighted_choice",
+        "placeholder",
+        "lorem"
+      ],
+      "title": "GeneratorMethod",
+      "type": "string"
+    },
+    "GroupEffect": {
+      "additionalProperties": false,
+      "description": "Shift and scale for a single group level.",
+      "properties": {
+        "shift": {
+          "default": 0.0,
+          "title": "Shift",
+          "type": "number"
+        },
+        "scale_factor": {
+          "default": 1.0,
+          "title": "Scale Factor",
+          "type": "number"
+        }
+      },
+      "title": "GroupEffect",
+      "type": "object"
+    },
+    "GroupEffects": {
+      "additionalProperties": false,
+      "description": "Group-level distribution modifiers for a column.",
+      "properties": {
+        "group_column": {
+          "title": "Group Column",
+          "type": "string"
+        },
+        "effects": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GroupEffect"
+          },
+          "title": "Effects",
+          "type": "object"
+        }
+      },
+      "required": [
+        "group_column",
+        "effects"
+      ],
+      "title": "GroupEffects",
+      "type": "object"
+    },
+    "LengthDistribution": {
+      "additionalProperties": false,
+      "description": "Length specification for alphabet generator strings.",
+      "properties": {
+        "distribution": {
+          "default": "normal",
+          "title": "Distribution",
+          "type": "string"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        }
+      },
+      "title": "LengthDistribution",
+      "type": "object"
+    },
+    "MissingnessConfig": {
+      "additionalProperties": false,
+      "description": "Missingness pattern specification.",
+      "properties": {
+        "pattern": {
+          "$ref": "#/$defs/MissingnessPattern"
+        },
+        "co_missing": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Co Missing"
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "title": "MissingnessConfig",
+      "type": "object"
+    },
+    "MissingnessPattern": {
+      "description": "Patterns describing the mechanism of missing data.",
+      "enum": [
+        "MCAR",
+        "MAR",
+        "MNAR",
+        "observed"
+      ],
+      "title": "MissingnessPattern",
+      "type": "string"
+    },
+    "NumericStats": {
+      "additionalProperties": false,
+      "description": "Statistics for float64 and int64 columns.",
+      "properties": {
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "median": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median"
+        },
+        "skewness": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skewness"
+        },
+        "kurtosis": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kurtosis"
+        },
+        "null_fraction": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Null Fraction",
+          "type": "number"
+        },
+        "percentiles": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Percentiles"
+        }
+      },
+      "title": "NumericStats",
+      "type": "object"
+    },
+    "ProfilerConfig": {
+      "additionalProperties": false,
+      "description": "Thresholds used by the profiling engine.",
+      "properties": {
+        "categorical_max_cardinality": {
+          "default": 50,
+          "title": "Categorical Max Cardinality",
+          "type": "integer"
+        },
+        "categorical_max_fraction": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Categorical Max Fraction",
+          "type": "number"
+        },
+        "correlation_threshold": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Correlation Threshold",
+          "type": "number"
+        },
+        "distribution_fit_pvalue": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Distribution Fit Pvalue",
+          "type": "number"
+        }
+      },
+      "title": "ProfilerConfig",
+      "type": "object"
+    },
+    "StringStats": {
+      "additionalProperties": false,
+      "description": "Statistics for free-text and structured string columns.",
+      "properties": {
+        "null_fraction": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Null Fraction",
+          "type": "number"
+        },
+        "mean_length": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Length"
+        },
+        "max_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Length"
+        },
+        "pattern_coverage": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern Coverage"
+        }
+      },
+      "title": "StringStats",
+      "type": "object"
+    },
+    "ValidationConfig": {
+      "additionalProperties": false,
+      "description": "Thresholds used by the validation engine.",
+      "properties": {
+        "ks_pvalue": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Ks Pvalue",
+          "type": "number"
+        },
+        "chisq_pvalue": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Chisq Pvalue",
+          "type": "number"
+        },
+        "null_tolerance": {
+          "default": 0.02,
+          "minimum": 0.0,
+          "title": "Null Tolerance",
+          "type": "number"
+        },
+        "range_tolerance": {
+          "default": 0.05,
+          "minimum": 0.0,
+          "title": "Range Tolerance",
+          "type": "number"
+        },
+        "boolean_tolerance": {
+          "default": 0.05,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Boolean Tolerance",
+          "type": "number"
+        },
+        "correlation_frobenius": {
+          "default": 0.1,
+          "minimum": 0.0,
+          "title": "Correlation Frobenius",
+          "type": "number"
+        }
+      },
+      "title": "ValidationConfig",
+      "type": "object"
+    },
+    "ValidationOverrides": {
+      "additionalProperties": false,
+      "description": "Per-column validation threshold overrides.",
+      "properties": {
+        "ks_pvalue": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ks Pvalue"
+        },
+        "chisq_pvalue": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chisq Pvalue"
+        },
+        "null_tolerance": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Null Tolerance"
+        },
+        "range_tolerance": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Range Tolerance"
+        },
+        "boolean_tolerance": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Boolean Tolerance"
+        },
+        "correlation_frobenius": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Frobenius"
+        }
+      },
+      "title": "ValidationOverrides",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The top-level profile schema for proof-of-replica.\n\nThis is the single source of truth for replica generation.\nAll configuration lives here; CLI flags set initial values\nduring profiling, but the persisted profile is canonical.",
+  "properties": {
+    "tool": {
+      "default": "proof-of-replica",
+      "title": "Tool",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "created_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
+    },
+    "source_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Hash"
+    },
+    "seed": {
+      "default": 42,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "row_count": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Row Count"
+    },
+    "defaults": {
+      "$ref": "#/$defs/DefaultsConfig"
+    },
+    "profiler": {
+      "$ref": "#/$defs/ProfilerConfig"
+    },
+    "validation": {
+      "$ref": "#/$defs/ValidationConfig"
+    },
+    "columns": {
+      "items": {
+        "$ref": "#/$defs/ColumnDefinition"
+      },
+      "minItems": 1,
+      "title": "Columns",
+      "type": "array"
+    },
+    "correlations": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CorrelationConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "missingness": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MissingnessConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "version",
+    "columns"
+  ],
+  "title": "Profile",
+  "type": "object"
+}
