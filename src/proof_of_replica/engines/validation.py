@@ -2,6 +2,7 @@
 
 import logging
 from enum import StrEnum
+from itertools import combinations
 
 import numpy as np
 import polars as pl
@@ -75,6 +76,9 @@ def validate(df: pl.DataFrame, profile: Profile) -> ValidationResult:
 
     if profile.correlations is not None:
         checks.extend(_check_correlations(df, profile))
+
+    checks.extend(_check_k_anonymity(df, profile))
+    checks.extend(_check_quasi_identifiers(df, profile))
 
     summary = {s.value: 0 for s in CheckStatus}
     for c in checks:
@@ -370,3 +374,77 @@ def _check_correlations(df: pl.DataFrame, profile: Profile) -> list[CheckResult]
             detail={"frobenius_norm": frob},
         )
     ]
+
+
+def _check_k_anonymity(df: pl.DataFrame, profile: Profile) -> list[CheckResult]:
+    """Check k-anonymity on categorical columns."""
+    k = profile.validation.k_anonymity_k
+    cat_cols = [
+        c.name
+        for c in profile.columns
+        if c.dtype == ColumnDtype.CATEGORICAL and c.name in df.columns
+    ]
+
+    if len(cat_cols) < 1:
+        return []
+
+    grouped = df.group_by(cat_cols).len()
+    min_group = int(grouped["len"].min())  # type: ignore[arg-type]
+
+    status = CheckStatus.PASS if min_group >= k else CheckStatus.WARN
+    return [
+        CheckResult(
+            check_name="k_anonymity",
+            status=status,
+            message=f"k-anonymity: min group size {min_group} (k={k})",
+            detail={"min_group_size": min_group, "k": k},
+        )
+    ]
+
+
+def _check_quasi_identifiers(df: pl.DataFrame, profile: Profile) -> list[CheckResult]:
+    """Detect quasi-identifier column combinations with small groups."""
+    max_k = profile.validation.quasi_id_max_k
+    cat_cols = [
+        c.name
+        for c in profile.columns
+        if c.dtype == ColumnDtype.CATEGORICAL and c.name in df.columns
+    ]
+
+    if len(cat_cols) < 2:
+        return []
+
+    results: list[CheckResult] = []
+
+    for r in range(2, min(len(cat_cols) + 1, 4)):
+        for combo in combinations(cat_cols, r):
+            cols = list(combo)
+            grouped = df.group_by(cols).len()
+            min_group = int(grouped["len"].min())  # type: ignore[arg-type]
+
+            if min_group < max_k:
+                results.append(
+                    CheckResult(
+                        check_name="quasi_identifier",
+                        status=CheckStatus.WARN,
+                        message=(
+                            f"Quasi-ID risk: columns {cols} have min group size "
+                            f"{min_group} (threshold: {max_k})"
+                        ),
+                        detail={
+                            "columns": ", ".join(cols),
+                            "min_group_size": min_group,
+                        },
+                    )
+                )
+
+    if not results:
+        results.append(
+            CheckResult(
+                check_name="quasi_identifier",
+                status=CheckStatus.PASS,
+                message="No quasi-identifier risks detected",
+            )
+        )
+
+    return results
