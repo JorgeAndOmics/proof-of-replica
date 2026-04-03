@@ -3,6 +3,7 @@
 import click
 
 from proof_of_replica import __version__
+from proof_of_replica.cli.commands.diff_cmd import diff_cmd
 from proof_of_replica.cli.commands.generate_cmd import generate_cmd
 from proof_of_replica.cli.commands.profile_cmd import profile
 from proof_of_replica.cli.commands.replicate_cmd import replicate
@@ -23,3 +24,4 @@ app.add_command(validate_cmd, name="validate")
 app.add_command(template)
 app.add_command(scaffold)
 app.add_command(replicate)
+app.add_command(diff_cmd, name="diff")
