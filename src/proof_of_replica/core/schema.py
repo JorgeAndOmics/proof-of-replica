@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from proof_of_replica.core.column_schema import ColumnDefinition
+from proof_of_replica.core.cross_constraints import CrossConstraintBlock
 from proof_of_replica.core.enums import CorrelationMethod, MissingnessPattern
 from proof_of_replica.exceptions import (
     ProfileError,
@@ -119,6 +120,8 @@ class Profile(BaseModel):
 
     correlations: CorrelationConfig | None = None
     missingness: MissingnessConfig | None = None
+    constraints: CrossConstraintBlock | None = None
+    hooks: dict[str, str] | None = None
 
 
 # ── Profile I/O ──────────────────────────────────────────────

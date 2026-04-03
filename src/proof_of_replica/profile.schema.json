@@ -1,5 +1,30 @@
 {
   "$defs": {
+    "ArithmeticInvariant": {
+      "additionalProperties": false,
+      "description": "A derived column is computed from an expression over other columns.",
+      "properties": {
+        "derived": {
+          "title": "Derived",
+          "type": "string"
+        },
+        "expression": {
+          "title": "Expression",
+          "type": "string"
+        },
+        "tolerance": {
+          "default": 0.01,
+          "title": "Tolerance",
+          "type": "number"
+        }
+      },
+      "required": [
+        "derived",
+        "expression"
+      ],
+      "title": "ArithmeticInvariant",
+      "type": "object"
+    },
     "BooleanStats": {
       "additionalProperties": false,
       "description": "Statistics for boolean columns.",
@@ -255,6 +280,79 @@
       "title": "ColumnRole",
       "type": "string"
     },
+    "CompositeUniqueness": {
+      "additionalProperties": false,
+      "description": "A combination of columns must have unique values per row.",
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Columns",
+          "type": "array"
+        },
+        "unique": {
+          "default": true,
+          "title": "Unique",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "columns"
+      ],
+      "title": "CompositeUniqueness",
+      "type": "object"
+    },
+    "ConditionalNull": {
+      "additionalProperties": false,
+      "description": "A column's nullness depends on another column's value.",
+      "properties": {
+        "column": {
+          "title": "Column",
+          "type": "string"
+        },
+        "condition": {
+          "title": "Condition",
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/$defs/ConstraintAction",
+          "default": "set_null"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "column",
+        "condition"
+      ],
+      "title": "ConditionalNull",
+      "type": "object"
+    },
+    "ConstraintAction": {
+      "description": "Action to take when a conditional null constraint fires.",
+      "enum": [
+        "set_null",
+        "set_zero",
+        "set_value"
+      ],
+      "title": "ConstraintAction",
+      "type": "string"
+    },
     "CorrelationConfig": {
       "additionalProperties": false,
       "description": "Pairwise correlation matrix for numeric columns.",
@@ -297,6 +395,42 @@
       ],
       "title": "CorrelationMethod",
       "type": "string"
+    },
+    "CrossConstraintBlock": {
+      "additionalProperties": false,
+      "description": "Container for all cross-column constraints in a profile.",
+      "properties": {
+        "conditional_nulls": {
+          "items": {
+            "$ref": "#/$defs/ConditionalNull"
+          },
+          "title": "Conditional Nulls",
+          "type": "array"
+        },
+        "temporal_ordering": {
+          "items": {
+            "$ref": "#/$defs/TemporalOrdering"
+          },
+          "title": "Temporal Ordering",
+          "type": "array"
+        },
+        "arithmetic_invariants": {
+          "items": {
+            "$ref": "#/$defs/ArithmeticInvariant"
+          },
+          "title": "Arithmetic Invariants",
+          "type": "array"
+        },
+        "composite_uniqueness": {
+          "items": {
+            "$ref": "#/$defs/CompositeUniqueness"
+          },
+          "title": "Composite Uniqueness",
+          "type": "array"
+        }
+      },
+      "title": "CrossConstraintBlock",
+      "type": "object"
     },
     "DateStats": {
       "additionalProperties": false,
@@ -875,6 +1009,26 @@
       "title": "StringStats",
       "type": "object"
     },
+    "TemporalOrdering": {
+      "additionalProperties": false,
+      "description": "One date column must come before another.",
+      "properties": {
+        "before": {
+          "title": "Before",
+          "type": "string"
+        },
+        "after": {
+          "title": "After",
+          "type": "string"
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "title": "TemporalOrdering",
+      "type": "object"
+    },
     "ValidationConfig": {
       "additionalProperties": false,
       "description": "Thresholds used by the validation engine.",
@@ -1103,6 +1257,32 @@
         }
       ],
       "default": null
+    },
+    "constraints": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CrossConstraintBlock"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "hooks": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hooks"
     }
   },
   "required": [
