@@ -3,11 +3,13 @@
 import click
 
 from proof_of_replica import __version__
+from proof_of_replica.cli.commands.convert_cmd import convert
 from proof_of_replica.cli.commands.diff_cmd import diff_cmd
 from proof_of_replica.cli.commands.generate_cmd import generate_cmd
 from proof_of_replica.cli.commands.profile_cmd import profile
 from proof_of_replica.cli.commands.profile_diff_cmd import profile_diff_cmd
 from proof_of_replica.cli.commands.profile_merge_cmd import profile_merge_cmd
+from proof_of_replica.cli.commands.profile_redact_cmd import profile_redact_cmd
 from proof_of_replica.cli.commands.replicate_cmd import replicate
 from proof_of_replica.cli.commands.report_cmd import report
 from proof_of_replica.cli.commands.scaffold_cmd import scaffold
@@ -31,5 +33,7 @@ app.add_command(replicate)
 app.add_command(diff_cmd, name="diff")
 app.add_command(report)
 app.add_command(schema)
+app.add_command(convert)
 app.add_command(profile_diff_cmd, name="profile-diff")
 app.add_command(profile_merge_cmd, name="profile-merge")
+app.add_command(profile_redact_cmd, name="profile-redact")

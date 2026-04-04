@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import polars as pl
 import pytest
 from click.testing import CliRunner
 
@@ -235,3 +236,130 @@ class TestProfileMerge:
             app, ["profile-merge", str(a), "-o", str(tmp_path / "out.json")]
         )
         assert result.exit_code != 0
+
+
+# ── profile-redact ───────────────────────────────────────────
+
+
+class TestProfileRedact:
+    def test_drop_column(self, runner, tmp_path):
+        p = Profile(
+            version="0.2.0",
+            columns=[
+                ColumnDefinition(
+                    name="x", dtype="float64", stats={"mean": 0, "std": 1}
+                ),
+                ColumnDefinition(
+                    name="secret", dtype="float64", stats={"mean": 99, "std": 1}
+                ),
+            ],
+        )
+        src = _save(p, tmp_path / "p.json")
+        out = tmp_path / "redacted.json"
+        result = runner.invoke(
+            app,
+            [
+                "profile-redact",
+                str(src),
+                "-o",
+                str(out),
+                "--drop-columns",
+                "secret",
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(out.read_text())
+        names = [c["name"] for c in data["columns"]]
+        assert "secret" not in names
+        assert "x" in names
+
+    def test_drop_stats(self, runner, tmp_path):
+        p = Profile(
+            version="0.2.0",
+            columns=[
+                ColumnDefinition(
+                    name="x",
+                    dtype="float64",
+                    stats={
+                        "mean": 50,
+                        "std": 10,
+                        "min": 0,
+                        "max": 100,
+                        "percentiles": {"25": 40, "75": 60},
+                    },
+                ),
+            ],
+        )
+        src = _save(p, tmp_path / "p.json")
+        out = tmp_path / "redacted.json"
+        result = runner.invoke(
+            app,
+            [
+                "profile-redact",
+                str(src),
+                "-o",
+                str(out),
+                "--drop-stats",
+                "percentiles",
+                "--drop-stats",
+                "min",
+                "--drop-stats",
+                "max",
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(out.read_text())
+        stats = data["columns"][0]["stats"]
+        assert "percentiles" not in stats
+        assert "min" not in stats
+        assert "mean" in stats
+
+    def test_rounding(self, runner, tmp_path):
+        p = Profile(
+            version="0.2.0",
+            columns=[
+                ColumnDefinition(
+                    name="x",
+                    dtype="float64",
+                    stats={"mean": 3.14159265, "std": 1.23456789},
+                ),
+            ],
+        )
+        src = _save(p, tmp_path / "p.json")
+        out = tmp_path / "redacted.json"
+        result = runner.invoke(
+            app,
+            ["profile-redact", str(src), "-o", str(out), "--round-to", "3"],
+        )
+        assert result.exit_code == 0
+        data = json.loads(out.read_text())
+        mean = data["columns"][0]["stats"]["mean"]
+        assert mean == 3.14
+
+
+# ── convert ──────────────────────────────────────────────────
+
+
+class TestConvert:
+    def test_csv_to_parquet(self, runner, tmp_path):
+        df = pl.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
+        csv_path = tmp_path / "data.csv"
+        df.write_csv(csv_path)
+
+        out = tmp_path / "data.parquet"
+        result = runner.invoke(app, ["convert", str(csv_path), "-o", str(out)])
+        assert result.exit_code == 0
+        assert out.exists()
+        loaded = pl.read_parquet(out)
+        assert loaded.shape == (3, 2)
+
+    def test_parquet_to_tsv(self, runner, tmp_path):
+        df = pl.DataFrame({"x": [1.0, 2.0], "y": [3.0, 4.0]})
+        pq = tmp_path / "data.parquet"
+        df.write_parquet(pq)
+
+        out = tmp_path / "data.tsv"
+        result = runner.invoke(app, ["convert", str(pq), "-o", str(out)])
+        assert result.exit_code == 0
+        assert out.exists()
+        assert "\t" in out.read_text()
